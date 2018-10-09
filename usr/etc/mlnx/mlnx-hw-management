@@ -32,7 +32,8 @@
 #  MSN24*		Spider
 #  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2
 #  MSN201*		Boxer
-#  QMB7*|MQM87*|MSN37*|MSN34*	Jupiter, Jaguar, Anaconda
+#  QMB7*|MQM87*|MSN37*|MSN34* Jupiter, Jaguar, Anaconda
+#  MSN38*	    Tigris
 # Available options:
 # start        - install all BSP kernel drivers, connect drivers to devices, create BSP dictionary as symbolic
 #                links to sysfs entries
@@ -161,6 +162,27 @@ mqm8700_dis_table=(	0x64 5 \
 			0x50 16 \
 			0x48 2)
 
+msn3800_connect_table=(	mlxsw_minimal 0x48 2 \
+			max11603 0x64 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tps53679 0x72 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			24c32 0x50 16)
+
+msn3800_dis_table=(	0x64 5 \
+			0x70 5 \
+			0x71 5 \
+			0x72 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x50 16 \
+			0x48 2)
 
 fan_max_speed=23000
 fan_min_speed=10500
@@ -269,6 +291,20 @@ mqm87xx_sn37x_sn34x_specific()
 	echo 3 > /bsp/config/cpld_num
 }
 
+msn38xx_specific()
+{
+	connect_size=${#msn3800_connect_table[@]}
+	for ((i=0; i<$connect_size; i++))
+	do
+		connect_table[i]=${msn3800_connect_table[i]}
+	done
+	disconnect_size=${#msn3800_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++))
+	do
+		dis_table[i]=${msn3800_dis_table[i]}
+	done
+	echo 3 > /bsp/config/cpld_num
+}
 
 check_system()
 {
@@ -294,6 +330,9 @@ check_system()
 			QMB7*|MQM87*|MSN37*|MSN34*)
 				mqm87xx_sn37x_sn34x_specific
 				;;
+			MSN38*)
+				msn38xx_specific
+				;;
 			*)
 				echo $product is not supported
 				exit 0
@@ -317,6 +356,9 @@ check_system()
 				;;
 			VMOD0005)
 				mqm87xx_sn37x_sn34x_specific
+				;;
+			VMOD0006)
+				msn38xx_specific
 				;;
 			*)
 				echo $manufacturer is not Mellanox
