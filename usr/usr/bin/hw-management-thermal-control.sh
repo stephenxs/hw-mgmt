@@ -488,7 +488,7 @@ update_psu_fan_speed()
 				addr=`cat $config_path/psu"$i"_i2c_addr`
 				command=`cat $fan_command`
 				speed=`cat $fan_psu_default`
-				entry=$(($fan_dynamic_min-$fan_max_state))
+				entry=`cat $thermal_path/cooling_cur_state`
 				speed=${psu_fan_speed[$entry]}
 				i2cset -f -y $bus $addr $command $speed wp
 			fi
