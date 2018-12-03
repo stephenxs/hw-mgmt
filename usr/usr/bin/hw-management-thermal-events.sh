@@ -432,7 +432,6 @@ else
 		if [ -L $power_path/$2_volt ]; then
 			unlink $power_path/$2_volt
 		fi
-
 		if [ -f $power_path/$2_volt_out2 ]; then
 			unlink $power_path/$2_volt_out2
 		fi
