@@ -488,14 +488,8 @@ create_symbolic_links()
 	if [ ! -d $led_path ]; then
 		mkdir $led_path
 	fi
-	if [ ! -d $module_path ]; then
-		mkdir $module_path
-	fi
 	if [ ! -d $system_path ]; then
 		mkdir $system_path
-	fi
-	if [ ! -d $cpld_path ]; then
-		mkdir $cpld_path
 	fi
 	if [ ! -d $qsfp_path ]; then
 		mkdir $qsfp_path
@@ -523,7 +517,7 @@ remove_symbolic_links()
 			fi
 		done
 		rm -rf $config_path
-		if [ -z "$(ls -A $hw_management_pat)" ]; then
+		if [ -z "$(ls -A $hw_management_path)" ]; then
 			rm -rf $hw_management_path
 		fi
 	fi

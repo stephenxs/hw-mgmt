@@ -583,7 +583,7 @@ set_pwm_min_threshold()
 			for ((i=0; i<$size; i+=2)); do
 				tresh=${unk_dir_trust[i]}
 				if [ $ambient -lt $tresh]; then
-					fan_dynamic_min==${unk_dir_trust[$(($i+1))]}
+					fan_dynamic_min=${unk_dir_trust[$(($i+1))]}
 					break
 				fi
 			done
