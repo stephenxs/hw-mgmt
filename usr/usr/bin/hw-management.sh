@@ -76,9 +76,7 @@ environment_path=$hw_management_path/environment
 power_path=$hw_management_path/power
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
-module_path=$hw_management_path/module
 system_path=$hw_management_path/system
-cpld_path=$hw_management_path/cpld
 qsfp_path=$hw_management_path/qsfp
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
@@ -506,6 +504,7 @@ remove_symbolic_links()
 {
 	# Clean hw-management directory - remove folder if it's empty
 	if [ -d $hw_management_path ]; then
+		find $hw_management_path -type l -exec unlink {} \;
 		sleep 3
 		for filename in $hw_management_path/*; do
 			if [ -d $filename ]; then
