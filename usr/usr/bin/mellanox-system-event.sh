@@ -107,7 +107,7 @@ if [ "$1" == "add" ]; then
       fi
     done
   fi
-  if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]; then
+  if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]|| [ "$2" == "voltmon4" ]; then
     ln -sf $3$4/in1_input /bsp/environment/$2_in1_input
     ln -sf $3$4/in2_input /bsp/environment/$2_in2_input
     ln -sf $3$4/curr2_input /bsp/environment/$2_curr2_input
@@ -115,6 +115,12 @@ if [ "$1" == "add" ]; then
     ln -sf $3$4/in3_input /bsp/environment/$2_in3_input
     ln -sf $3$4/curr3_input /bsp/environment/$2_curr3_input
     ln -sf $3$4/power3_input /bsp/environment/$2_power3_input
+  fi
+  if [ "$2" == "voltmon3" ]; then
+    ln -sf $3$4/in2_input /bsp/environment/$2_in2_input
+    ln -sf $3$4/curr2_input /bsp/environment/$2_curr2_input
+    ln -sf $3$4/power2_input /bsp/environment/$2_power2_input
+
   fi
   if [ "$2" == "asic" ]; then
     ln -sf $3$4/temp1_input /bsp/thermal/$2
@@ -363,7 +369,7 @@ else
       fi
     done
   fi
-  if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]; then
+  if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] || [ "$2" == "voltmon4" ]; then
     unlink /bsp/environment/$2_in1_input
     unlink /bsp/environment/$2_in2_input
     unlink /bsp/environment/$2_curr2_input
@@ -371,6 +377,11 @@ else
     unlink /bsp/environment/$2_in3_input
     unlink /bsp/environment/$2_curr3_input
     unlink /bsp/environment/$2_power3_input
+  fi
+  if [ "$2" == "voltmon3" ]; then
+    unlink /bsp/environment/$2_in2_input
+    unlink /bsp/environment/$2_curr2_input
+    unlink /bsp/environment/$2_power2_input
   fi
   if [ "$2" == "asic" ]; then
     unlink /bsp/thermal/$2
