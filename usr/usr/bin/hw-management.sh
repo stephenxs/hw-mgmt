@@ -400,11 +400,11 @@ msn38xx_specific()
 msn24102_specific()
 {
 	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
 	done
 	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
 	done
 
@@ -419,11 +419,11 @@ msn24102_specific()
 msn27002_msb78002_specific()
 {
 	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
 	done
 	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
 	done
 

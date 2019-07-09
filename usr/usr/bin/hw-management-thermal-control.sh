@@ -636,7 +636,7 @@ set_pwm_min_threshold()
 			size=${#unk_dir_trust[@]}
 			for ((i=0; i<$size; i+=2)); do
 				tresh=${unk_dir_trust[i]}
-				if [ $ambient -lt $tresh]; then
+				if [ $ambient -lt $tresh ]; then
 					fan_dynamic_min=${unk_dir_trust[$(($i+1))]}
 					break
 				fi
@@ -1109,8 +1109,8 @@ get_tz_highest()
 init_system_dynamic_minimum_db
 init_fan_dynamic_minimum_speed
 
-module_counter=`cat $config_path/module_counter`
-gearbox_counter=`cat $config_path/gearbox_counter`
+[ -r $config_path/module_counter ] && module_counter=$(cat $config_path/module_counter)
+[ -r $config_path/gearbox_counter ] && gearbox_counter=$(cat $config_path/gearbox_counter)
 
 echo $thermal_control_pid > /var/run/hw-management.pid
 log_action_msg "Mellanox thermal control is started"
