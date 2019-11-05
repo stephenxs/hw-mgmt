@@ -140,17 +140,38 @@ function qsfp_add_handler()
 	done
 
 	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
+
+        # Verify if CPLD attributes are exist
+        [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
+        if [ "$cpld" == "cpld1" ]; then
+                if [ -f ${QSFP_I2C_PATH}/cpld1_version ]; then
+                        ln -sf ${QSFP_I2C_PATH}/cpld1_version $system_path/cpld3_version
+                fi
+        fi
+        if [ "$cpld" == "cpld3" ]; then
+                if [ -f ${QSFP_I2C_PATH}/cpld3_version ]; then
+                        ln -sf ${QSFP_I2C_PATH}/cpld3_version $system_path/cpld3_version
+                fi
+        fi
 }
 
 function qsfp_remove_handler()
 {
 	find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
+
+        if [ -f "$config_path/cpld_port" ]; then
+                if [ -L $system_path/cpld3_version]; then
+                        unlink $system_path/cpld3_version
+                else
+                        rm -rf $system_path/cpld3_version
+                fi
+        fi
 }
 
 if [ "$1" == "add" ]; then
 	if [ "$2" == "a2d" ]; then
 		ln -sf $3$4/in_voltage-voltage_scale $environment_path/$2_$5_voltage_scale
-		for i in {1..12}; do
+		for i in {0..7}; do
 			if [ -f $3$4/in_voltage"$i"_raw ]; then
 				ln -sf $3$4/in_voltage"$i"_raw $environment_path/$2_$5_raw_"$i"
 			fi
@@ -270,7 +291,7 @@ elif [ "$1" == "mv" ]; then
 else
 	if [ "$2" == "a2d" ]; then
 		unlink $environment_path/$2_$5_voltage_scale
-		for i in {1..12}; do
+		for i in {0..7}; do
 			if [ -L $environment_path/$2_$5_raw_"$i" ]; then
 				unlink $environment_path/$2_$5_raw_"$i"
 			fi
@@ -361,8 +382,10 @@ else
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
 		[ -f "$config_path/sfp_counter" ] && sfp_counter=`cat $config_path/sfp_counter`
-		sfp_counter=$(($sfp_counter-1))
-		echo $sfp_counter > $config_path/sfp_counter
+		if [ $sfp_counter > 0]; then
+			sfp_counter=$(($sfp_counter-1))
+			echo $sfp_counter > $config_path/sfp_counter
+		fi
 		unlock_service_state_change
 	fi
 fi

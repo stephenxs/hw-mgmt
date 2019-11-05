@@ -72,24 +72,6 @@ find_i2c_bus()
 	exit 0
 }
 
-asic_hotplug_helper()
-{
-	if [ ! -f $config_path/nos ]; then
-		if [ -d /etc/sonic ]; then
-			nos=SONiC
-		fi
-		echo $nos > $config_path/nos
-	fi
-	nos=`cat $config_path/nos`
-	case $nos in
-	*SONiC*)
-		;;
-	*)
-		/usr/bin/hw-management.sh chipup
-		;;
-	esac
-}
-
 lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
@@ -122,6 +104,13 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
+		if [ ! -f "$config_path/gearbox_counter" ]; then
+		    echo 0 > $config_path/gearbox_counter
+		fi
+		if [ ! -f "$config_path/module_counter" ]; then
+		    echo 0 > $config_path/module_counter
+		fi
+
 		if [ "$name" == "mlxsw" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/asic
 			if [ -f $3$4/pwm1 ]; then
@@ -157,10 +146,10 @@ if [ "$1" == "add" ]; then
 					case $label in
 					*front*)
 						j=$(($i-1))
-						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_module"$j"
-						ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_module"$j"
-						ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_module"$j"
-						ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_module"$j"
+						ln -sf $3$4/temp"$i"_input $thermal_path/module"$j"_temp_input
+						ln -sf $3$4/temp"$i"_fault $thermal_path/module"$j"_temp_fault
+						ln -sf $3$4/temp"$i"_crit $thermal_path/module"$j"_temp_crit
+						ln -sf $3$4/temp"$i"_emergency $thermal_path/module"$j"_temp_emergency
 						lock_service_state_change
 						[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 						module_counter=$(($module_counter+1))
@@ -173,7 +162,7 @@ if [ "$1" == "add" ]; then
 						gearbox_counter=$(($gearbox_counter+1))
 						echo $gearbox_counter > $config_path/gearbox_counter
 						unlock_service_state_change
-						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$gearbox_counter"
+						ln -sf $3$4/temp"$i"_input $thermal_path/gearbox"$gearbox_counter"_temp_input
 						;;
 					*)
 						;;
@@ -272,7 +261,9 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		asic_hotplug_helper
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipup
+		fi
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -302,9 +293,11 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Set default fan speed
-		addr=`cat $config_path/psu"$i"_i2c_addr`
+		addr=`cat $config_path/"$2"_i2c_addr`
 		command=`cat $fan_command`
 		speed=`cat $fan_psu_default`
+		# Allow PS controller to stabilize
+		sleep 2
 		i2cset -f -y $bus $addr $command $speed wp
 		# Set I2C bus for psu
 		echo $bus > $config_path/"$2"_i2c_bus
@@ -338,6 +331,12 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/power2_input $power_path/$2_power
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
+	fi
+	if [ "$2" == "sxcore" ]; then
+		if [ ! -d /sys/module/mlxsw_minimal ]; then
+			modprobe mlxsw_minimal
+		fi
+		/usr/bin/hw-management.sh chipup
 	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "thermal_zone" ]; then
@@ -377,20 +376,21 @@ elif [ "$1" == "change" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
-		find_i2c_bus
-		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
-		path=/sys/bus/i2c/devices/i2c-$bus
 		if [ "$3" == "up" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			asic_hotplug_helper
+			if [ ! -f /etc/init.d/sxdkernel ]; then
+				/usr/bin/hw-management.sh chipup
+			fi
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown
 		else
 			asic_health=`cat $4$5/asic1`
 			if [ $asic_health -eq 2 ]; then
-				asic_hotplug_helper
+				if [ ! -f /etc/init.d/sxdkernel ]; then
+					/usr/bin/hw-management.sh chipup
+				fi
 			else
 				/usr/bin/hw-management.sh chipdown
 			fi
@@ -398,7 +398,9 @@ elif [ "$1" == "change" ]; then
 	fi
 elif [ "$1" == "online" ]; then
 	if [ "$2" == "hotplug" ]; then
-		/usr/bin/hw-management.sh chipup
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipup
+		fi
 	fi
 elif [ "$1" == "offline" ]; then
 	if [ "$2" == "hotplug" ]; then
@@ -423,6 +425,10 @@ else
 		fi
 	fi
 	if [ "$2" == "switch" ]; then
+		[ -f "$config_path/stopping" ] && stopping=`cat $config_path/stopping`
+		if [ $stopping ] &&  [ "$stopping" = "1" ]; then
+			exit 0
+		fi
 		if [ -L $thermal_path/asic ]; then
 			unlink $thermal_path/asic
 		fi
@@ -451,28 +457,28 @@ else
 		fi
 		for ((i=$max_module_gbox_ind; i>=2; i-=1)); do
 			j=$(($i-1))
-			if [ -L $thermal_path/temp_input_module"$j" ]; then
-				unlink $thermal_path/temp_input_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_input ]; then
+				unlink $thermal_path/module"$j"_temp_input
 				lock_service_state_change
 				[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 				module_counter=$(($module_counter-1))
 				echo $module_counter > $config_path/module_counter
 				unlock_service_state_change
 			fi
-			if [ -L $thermal_path/temp_fault_module"$j" ]; then
-				unlink $thermal_path/temp_fault_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_fault ]; then
+				unlink $thermal_path/module"$j"_temp_fault
 			fi
-			if [ -L $thermal_path/temp_crit_module"$j" ]; then
-				unlink $thermal_path/temp_crit_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_crit ]; then
+				unlink $thermal_path/module"$j"_temp_crit
 			fi
-			if [ -L $thermal_path/temp_emergency_module"$j" ]; then
-				unlink $thermal_path/temp_emergency_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_emergency ]; then
+				unlink $thermal_path/module"$j"_temp_emergency
 			fi
 		done
-		find /var/run/hw-management/thermal/ -type l -name 'temp_input_*' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name 'temp_fault_*' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name 'temp_crit_*' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name 'temp_emergency_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_input' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_fault' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_crit' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_emergency' -exec rm {} +
 		echo 0 > $config_path/module_counter
 		echo 0 > $config_path/gearbox_counter
 	fi
@@ -499,41 +505,18 @@ else
 		done
 	fi
 	if [ "$2" == "thermal_zone" ]; then
+		[ -f "$config_path/stopping" ] && stopping=`cat $config_path/stopping`
+		if [ $stopping ] &&  [ "$stopping" = "1" ]; then
+			exit 0
+		fi
 		for ((i=1; i<$max_module_gbox_ind; i+=1)); do
 			if [ -d $thermal_path/mlxsw-module"$i" ]; then
-				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_policy
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_norm
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_high
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_hot
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_crit
-				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp
-				if [ -L $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul ]; then
-					unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul
-				fi
 				rm -rf $thermal_path/mlxsw-module"$i"
 			elif [ -d $thermal_path/mlxsw-gearbox"$i" ]; then
-				unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_high
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit
-				unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp
-				if [ -L $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp_emul ]; then
-					unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp_emul
-				fi
 				rm -rf $thermal_path/mlxsw-gerabox"$i"
 			fi
 		done
 		if [ -d $thermal_path/mlxsw ]; then
-			unlink $thermal_path/mlxsw/thermal_zone_policy
-			unlink $thermal_path/mlxsw/temp_trip_norm
-			unlink $thermal_path/mlxsw/temp_trip_high
-			unlink $thermal_path/mlxsw/temp_trip_hot
-			unlink $thermal_path/mlxsw/temp_trip_crit
-			unlink $thermal_path/mlxsw/thermal_zone_temp
-			if [ -L $thermal_path/thermal_zone_temp_emul ]; then
-				unlink $thermal_path/mlxsw/thermal_zone_temp_emul
-			fi
 			rm -rf $thermal_path/mlxsw
 		fi
 		if [ -L $thermal_path/highest_thermal_zone ]; then
@@ -565,9 +548,6 @@ else
 		if [ -L $config_path/port_config_done ]; then
 			unlink $config_path/port_config_done
 		fi
-		find_i2c_bus
-		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
-		path=/sys/bus/i2c/devices/i2c-$bus
 		/usr/bin/hw-management.sh chipdown
 	fi
 	if [ "$2" == "cputemp" ]; then
@@ -646,5 +626,8 @@ else
 		if [ -L $power_path/$2_curr ]; then
 			unlink $power_path/$2_curr
 		fi
+	fi
+	if [ "$2" == "sxcore" ]; then
+		/usr/bin/hw-management.sh chipdown
 	fi
 fi
