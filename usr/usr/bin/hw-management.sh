@@ -593,7 +593,11 @@ do_start()
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
 
-	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
+#
+#	Disable thermal control algorithm in hw-management service
+#	because there has already been that in SONiC
+#
+#	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
 
 do_stop()
